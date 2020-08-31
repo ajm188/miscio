@@ -2,6 +2,7 @@ package miscio
 
 import (
 	"io"
+	"os"
 	"sync"
 )
 
@@ -61,6 +62,8 @@ func (rs *rangeSet) Consume(n int64) {
 
 // WriterAtReadCloser is a struct implementing io.WriterAt and io.ReadCloser
 // Writes are buffered in memory only until they are used by a call to Read().
+// Bytes can only be read once from the buffer — they are dropped after a successful
+// Read() call.
 type WriterAtReadCloser struct {
 	buf []byte
 	m   sync.Mutex
@@ -73,18 +76,29 @@ type WriterAtReadCloser struct {
 	GrowthCoeff float64
 }
 
-func NewWriterAtReadCloser(b []byte) *WriterAtReadCloser {
+// NewWriterAtReadCloser returns a new WriterAtReadCloser object. Its underlying
+// buffer is preallocated to have n bytes.
+func NewWriterAtReadCloser(n int) *WriterAtReadCloser {
 	return &WriterAtReadCloser{
-		buf:        b,
+		buf:        make([]byte, n),
 		bytesAvail: newRangeSet(),
 		bytesRead:  0,
 		readClosed: false,
 	}
 }
 
+// Write copies the contents of p into the underlying buffer, beginning at the
+// specified offset. The underlying buffer will expand as necessary, according
+// to len(p) and wr.GrowthCoeff. It is not an error to write over the same section
+// of the underlying buffer. Write returns an os.ErrClosed if Closed() was previously
+// called.
 func (wr *WriterAtReadCloser) WriteAt(p []byte, off int64) (n int, err error) {
 	wr.m.Lock()
 	defer wr.m.Unlock()
+
+	if wr.readClosed {
+		return 0, os.ErrClosed
+	}
 
 	// the caller shouldn't have to know about or care that we're shrinking the buffer from the
 	// left-hand side as they're read.
@@ -115,6 +129,8 @@ func (wr *WriterAtReadCloser) growBuffer(expLen int64) {
 	wr.buf = newBuf
 }
 
+// Read consumes up to len(p) bytes from the underlying buffer and writes them into
+// p. io.EOF is Closed() was previously called.
 func (wr *WriterAtReadCloser) Read(p []byte) (n int, err error) {
 	wr.m.Lock()
 	defer wr.m.Unlock()
@@ -124,7 +140,10 @@ func (wr *WriterAtReadCloser) Read(p []byte) (n int, err error) {
 	}
 
 	// nolint:godox
-	// TODO: if readable is zero, maybe block until some bytes were written?
+	// TODO: If `readable` is zero, maybe block until some bytes were written?
+	// 		Alternatively, consider parameterizing a `NumAllowedEmptyReads`, then
+	// 		return an `io.ErrNoProgress` if `readable` is zero that many times in
+	//		a row.
 	readable := wr.bytesAvail.NextCap()
 	if readable >= int64(len(p)) {
 		readable = int64(len(p))
@@ -139,6 +158,9 @@ func (wr *WriterAtReadCloser) Read(p []byte) (n int, err error) {
 	return int(readable), nil
 }
 
+// Close closes off the WriterAtReadCloser for both future reading and writing.
+// Subsequent calls to Read() will return io.EOF, and subsequent calls to Write()
+// will return os.ErrClosed.
 func (wr *WriterAtReadCloser) Close() error {
 	wr.m.Lock()
 	defer wr.m.Unlock()

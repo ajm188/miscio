@@ -32,7 +32,7 @@ func WriteInChunks(w io.WriterAt, b []byte, base, chunkSize int) error {
 }
 
 func TestWriteThenRead(t *testing.T) {
-	w := NewWriterAtReadCloser([]byte{})
+	w := NewWriterAtReadCloser(0)
 	WriteInChunks(w, []byte("hello world"), 0, 2)
 
 	buf := make([]byte, len("hello world"))
@@ -48,7 +48,7 @@ func TestWriteThenRead(t *testing.T) {
 }
 
 func TestReadBeforeWrite(t *testing.T) {
-	w := NewWriterAtReadCloser([]byte{})
+	w := NewWriterAtReadCloser(0)
 	WriteInChunks(w, []byte("world"), 6, 4)
 	fmt.Println(string(w.buf))
 
