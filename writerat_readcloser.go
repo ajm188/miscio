@@ -1,7 +1,7 @@
 package miscio
 
 import (
-	"errors"
+	"io"
 	"sync"
 )
 
@@ -23,9 +23,11 @@ func (rs *rangeSet) Add(a, b int64) {
 // NextCap returns the highest value N for which [0, N) is covered by the range set.
 func (rs *rangeSet) NextCap() int64 {
 	i := int64(0)
+
 	for {
 		if covered, ok := rs.m[i]; ok && covered {
 			i++
+
 			continue
 		}
 
@@ -58,7 +60,7 @@ func (rs *rangeSet) Consume(n int64) {
 }
 
 // WriterAtReadCloser is a struct implementing io.WriterAt and io.ReadCloser
-// Writes are buffered in memory only until they are used by a call to Read()
+// Writes are buffered in memory only until they are used by a call to Read().
 type WriterAtReadCloser struct {
 	buf []byte
 	m   sync.Mutex
@@ -99,6 +101,7 @@ func (wr *WriterAtReadCloser) WriteAt(p []byte, off int64) (n int, err error) {
 
 	copy(wr.buf[adjustedOffset:], p)
 	wr.bytesAvail.Add(adjustedOffset, adjustedOffset+int64(len(p)))
+
 	return len(p), nil
 }
 
@@ -117,9 +120,10 @@ func (wr *WriterAtReadCloser) Read(p []byte) (n int, err error) {
 	defer wr.m.Unlock()
 
 	if wr.readClosed {
-		return 0, errors.New("attempted to read from closed WriterAtReadCloser")
+		return 0, io.EOF
 	}
 
+	// nolint:godox
 	// TODO: if readable is zero, maybe block until some bytes were written?
 	readable := wr.bytesAvail.NextCap()
 	if readable >= int64(len(p)) {
@@ -140,5 +144,6 @@ func (wr *WriterAtReadCloser) Close() error {
 	defer wr.m.Unlock()
 
 	wr.readClosed = true
+
 	return nil
 }

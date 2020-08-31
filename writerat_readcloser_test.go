@@ -27,6 +27,7 @@ func WriteInChunks(w io.WriterAt, b []byte, base, chunkSize int) error {
 	}
 
 	wg.Wait()
+
 	return nil
 }
 
