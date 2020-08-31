@@ -1,0 +1,30 @@
+{
+    "folders": [
+        {
+            "name": "miscio",
+            "path": "..",
+        },
+    ],
+    "settings": {
+        "go.lintOnSave": "workspace",
+        "go.lintTool": "golangci-lint",
+        "go.lintFlags": [
+            "--fast",
+            "-c", ".golangci.yaml",
+        ],
+        "go.formatTool": "goimports",
+        "[go]": {
+            "editor.insertSpaces": false,
+            "editor.formatOnSave": true,
+            "editor.codeActionsOnSave": {
+                "source.organizeImports": true
+            },
+        },
+        "[go.mod]": {
+            "editor.formatOnSave": true,
+            "editor.codeActionsOnSave": {
+                "source.organizeImports": true,
+            },
+        },
+    },
+}

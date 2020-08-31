@@ -1,0 +1,22 @@
+run:
+  fast: true
+linters:
+  disable:
+    - gofumpt
+    - gomnd
+  presets:
+    - bugs
+    - complexity
+    - format
+    - performance
+    - style
+    - unused
+issues:
+  exclude-rules:
+    - path: _test.go
+      linters:
+        - errcheck
+        - testpackage
+
+
+skip-dirs-use-default: true
