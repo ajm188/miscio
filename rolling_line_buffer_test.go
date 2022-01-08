@@ -65,6 +65,7 @@ func assertReadResults(t *testing.T, want string, got []byte, wantN, gotN int, w
 	t.Helper()
 	gotString := string(got)
 	if gotN > 0 {
+		// truncate data that wasn't written when we convert into a string
 		gotString = string(got[:gotN])
 	}
 	// only compare strings if we actually expected to read something

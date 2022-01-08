@@ -9,6 +9,9 @@ import (
 // RollingLineBuffer provides an implementation of io.Reader and io.Writer that
 // stores the N most recent lines (delimited with '\n') written to it. Reads are
 // done forward-only; it does not implement io.Seeker.
+//
+// Reads will retrieve only full lines from a RollingLineBuffer and Writes will
+// buffer incomplete lines. See Read / Write docs for details.
 type RollingLineBuffer struct {
 	m          sync.Mutex
 	curLine    []byte
@@ -25,6 +28,12 @@ func NewRollingLineBuffer(capacity int) *RollingLineBuffer {
 	return NewRollingLineBufferWithDelimiter(capacity, "\n")
 }
 
+// NewRollingLineBuffer returns a new RollingLineBuffer than holds `capacity`
+// most recently-written lines. Buffers writes until the specified delimiter
+// is encountered.
+//
+// TODO: multi-byte delimiters currently not reliable; if the Write call breaks
+// the delimiter over two writes we won't notice so use them at your own risk.
 func NewRollingLineBufferWithDelimiter(capacity int, delimiter string) *RollingLineBuffer {
 	return &RollingLineBuffer{
 		buf:      make([][]byte, 0, capacity),
@@ -46,6 +55,12 @@ func (rb *RollingLineBuffer) LossyReads() bool {
 // lines into buf and returns according to the io.Reader specification. If buf
 // is too small to hold the first available line, Read returns ErrShortBuffer
 // to signal to the caller they need a bigger buffer.
+//
+// A partial line will not be read until the end-of-line delimiter is
+// written.
+//
+// If more lines are written than the buffer has been allocated to store
+// LossyReads will return true before (and only before) the next Read.
 func (rb *RollingLineBuffer) Read(buf []byte) (int, error) {
 	rb.m.Lock()
 	defer rb.m.Unlock()
@@ -78,7 +93,9 @@ func (rb *RollingLineBuffer) Read(buf []byte) (int, error) {
 	return copy(buf, tmp), nil
 }
 
-// Write implements io.Writer for RollingLineBuffer.
+// Write implements io.Writer for RollingLineBuffer. It uses the configured
+// delimiter as a marker for line separation and will buffer content until
+// the marker is written.
 func (rb *RollingLineBuffer) Write(data []byte) (int, error) {
 	lines := bytes.Split(data, []byte(rb.delim))
 	lastIdx := bytes.LastIndex(data, []byte(rb.delim))
