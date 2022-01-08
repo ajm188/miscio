@@ -65,11 +65,8 @@ func (rb *RollingLineBuffer) Read(buf []byte) (int, error) {
 	rb.m.Lock()
 	defer rb.m.Unlock()
 
-	if len(rb.buf) == 0 {
+	if len(rb.buf) == 0 || rb.readpos >= len(rb.buf) {
 		return 0, nil
-	}
-	if rb.readpos == len(rb.buf) {
-		return 0, io.EOF
 	}
 
 	if len(rb.buf[rb.readpos])+len(rb.delim) > len(buf) {

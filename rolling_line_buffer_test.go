@@ -1,7 +1,6 @@
 package miscio
 
 import (
-	"io"
 	"testing"
 )
 
@@ -94,7 +93,7 @@ func TestRLBReadToEnd(t *testing.T) {
 	assertReadResults(t, "c123456789\n", b, 11, n, nil, err)
 
 	n, err = rb.Read(b)
-	assertReadResults(t, "c123456789\n", b, 0, n, io.EOF, err)
+	assertReadResults(t, "c123456789\n", b, 0, n, nil, err)
 }
 
 func TestRLBPartialRead(t *testing.T) {
@@ -111,7 +110,7 @@ func TestRLBPartialRead(t *testing.T) {
 	assertReadResults(t, "b1234\n", b, 6, n, nil, err)
 
 	n, err = rb.Read(b)
-	assertReadResults(t, "", b, 0, n, io.EOF, err)
+	assertReadResults(t, "", b, 0, n, nil, err)
 
 	mustWrite(t, rb, []byte("89\naoeu"))
 	assertBufferContents(t, []string{"b1234", "c123456789"}, rb)
@@ -128,7 +127,7 @@ func TestRLBPartialRead(t *testing.T) {
 	assertReadResults(t, "aoeu\n", b, 5, n, nil, err)
 
 	n, err = rb.Read(b)
-	assertReadResults(t, "", b, 0, n, io.EOF, err)
+	assertReadResults(t, "", b, 0, n, nil, err)
 }
 
 func TestRLBAllNewlines(t *testing.T) {
@@ -141,5 +140,5 @@ func TestRLBAllNewlines(t *testing.T) {
 	n, err := rb.Read(b)
 	assertReadResults(t, "\n\n\n\n\n", b, 5, n, nil, err)
 	n, err = rb.Read(b)
-	assertReadResults(t, "", b, 0, n, io.EOF, err)
+	assertReadResults(t, "", b, 0, n, nil, err)
 }
